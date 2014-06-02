@@ -1,0 +1,14 @@
+PODS:
+  - CDManager (0.1.0)
+
+DEPENDENCIES:
+  - CDManager (from `../../`)
+
+EXTERNAL SOURCES:
+  CDManager:
+    :path: ../../
+
+SPEC CHECKSUMS:
+  CDManager: 3bde8b253fdae84d479a6c5a71adfb038fe2e678
+
+COCOAPODS: 0.33.1
