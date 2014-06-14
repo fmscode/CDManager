@@ -35,24 +35,15 @@
         NSAssert(dataModel, @"Error: You must supply a CoreDataModel value in your info.plist that matches the Core Data model file. Key was not found.");
         bundleId = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleIdentifier"];
         NSAssert(bundleId, @"Error: You must have the bundle id set in your info.plist.");
-
+        
         [self managedObjectContext];
     }
     return self;
 }
 #pragma mark - Class
 - (void)saveContext{
-#if TARGET_OS_MAC
-    NSError *error = nil;
     
-    if (![_managedObjectContext commitEditing]) {
-        NSLog(@"%@:%@ unable to commit editing before saving", [self class], NSStringFromSelector(_cmd));
-    }
-    
-    if (![_managedObjectContext save:&error]) {
-        NSAssert(error, error.description);
-    }
-#else
+#if TARGET_OS_IPHONE
     NSError *error = nil;
     NSManagedObjectContext *managedObjectContext = _managedObjectContext;
     if (managedObjectContext != nil) {
@@ -62,6 +53,16 @@
             NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
             abort();
         }
+    }
+#else
+    NSError *error = nil;
+    
+    if (![_managedObjectContext commitEditing]) {
+        NSLog(@"%@:%@ unable to commit editing before saving", [self class], NSStringFromSelector(_cmd));
+    }
+    
+    if (![_managedObjectContext save:&error]) {
+        NSAssert(error, error.description);
     }
 #endif
 }
@@ -73,7 +74,7 @@
     
     NSPersistentStoreCoordinator *coordinator = [self persistentStoreCoordinator];
     if (!coordinator) {
-#if TARGET_OS_MAC
+#if !TARGET_OS_IPHONE
         NSMutableDictionary *dict = [NSMutableDictionary dictionary];
         [dict setValue:@"Failed to initialize the store" forKey:NSLocalizedDescriptionKey];
         [dict setValue:@"There was an error building up the data file." forKey:NSLocalizedFailureReasonErrorKey];
@@ -91,9 +92,10 @@
         return persistentStoreCoordinator;
     }
     
-    NSURL *storeURL = [self applicationDirectory];
+    NSURL *storeURL = [[self applicationDirectory] URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.sqlite",dataModel]];
     NSError *error = nil;
-#if TARGET_OS_MAC
+    
+#if !TARGET_OS_IPHONE
     NSDictionary *properties = [storeURL resourceValuesForKeys:@[NSURLIsDirectoryKey] error:&error];
     
     if (!properties) {
@@ -115,6 +117,7 @@
     }
 #endif
     
+    
     persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
     [persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:nil error:&error];
     if (error){
@@ -132,12 +135,12 @@
 }
 - (NSURL *)applicationDirectory{
     NSURL *directory;
-#if TARGET_OS_MAC
+#if !TARGET_OS_IPHONE
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSURL *appSupportURL = [[fileManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask] lastObject];
     directory = [appSupportURL URLByAppendingPathComponent:bundleId];
 #else
-    directory = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject]
+    directory = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
 #endif
     return directory;
 }
